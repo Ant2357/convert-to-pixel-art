@@ -1,6 +1,6 @@
 <template>
   <div>
-    <label v-show="!appState.uploadedImage">
+    <label v-show="!appState.uploadedImages[0]">
       画像を選択
       <input
         type="file"
@@ -8,24 +8,39 @@
         @change="onFileChange"
         @click="e => { e.target.value = '' }"
       />
+
     </label>
-    <div>
+    <label v-show="!appState.uploadedImages[0]">
+      画像を選択(フォルダ参照版)
+      <input
+        type="file"
+        accept="image/*"
+        webkitdirectory
+        multiple
+        @change="onFileChange($event, true)"
+        @click="e => { e.target.value = '' }"
+      />
+    </label>
+
+    <div v-for="(uploadedImages, index) in appState.uploadedImages" :key="uploadedImages">
       <img
-        id="pixelitimg"
+        class="pixelitimg"
         v-show="!appState.isConvert"
-        :src="appState.uploadedImage"
+        :src="uploadedImages"
       />
 
       <canvas
-        id="pixelitcanvas"
+        class="pixelitcanvas"
       ></canvas>
 
-      <div v-show="appState.uploadedImage">
-        <p>{{ appState.imgName }}</p>
-        <button @click="convertToPixelArt">convert</button>
-        <button @click="remove">close</button>
-      </div>
+      <p>{{ appState.imgNames[index] }}</p>
     </div>
+
+    <div v-show="appState.uploadedImages[0]">
+      <button @click="convertToPixelArt">convert</button>
+      <button @click="remove">close</button>
+    </div>
+
   </div>
 </template>
 
@@ -37,45 +52,70 @@ export default defineComponent({
   name: 'App',
   setup() {
     const appState = reactive({
-      uploadedImage: "",
-      imgName: "",
+      uploadedImages: [],
+      imgNames: [],
       isConvert: false
     });
 
-    const onFileChange = e => {
+    const onFileChange = (e, isMultiple = false) => {
       const files = e.target.files || e.dataTransfer.files;
-      createImage(files[0]);
-      appState.imgName = files[0].name;
+
+      // 単独ファイルの変換
+      if (!isMultiple) {
+        createImage(files[0], 0);
+        appState.imgNames = [files[0].name];
+        return;
+      }
+
+      // 複数ファイルの変換
+      const arrFiles = Object.entries(files).map(v =>{
+        const [,...res] = v;
+        return res;
+      });
+      arrFiles.forEach((file, index) => {
+        createImage(file[0], index);
+      });
+      appState.imgNames = arrFiles.map(file => file[0].name);
     };
 
-    const createImage = file => {
+    const createImage = (file, index) => {
       const reader = new FileReader();
       reader.onload = e => {
-        appState.uploadedImage = e.target.result;
+        appState.uploadedImages[index] = e.target.result;
       };
       reader.readAsDataURL(file);
     };
 
     const remove = () => {
       // canvasの初期化(Vueで生DOMを触りたくない)(心からの叫び)
-      const canvasDom = document.getElementById("pixelitcanvas");
-      const ctx = canvasDom.getContext("2d");
-      ctx.clearRect(0, 0, canvasDom.width, canvasDom.height);
+      const canvasDoms = document.querySelectorAll(".pixelitcanvas");
+      canvasDoms.forEach(canvasDom => {
+        const ctx = canvasDom.getContext("2d");
+        ctx.clearRect(0, 0, canvasDom.width, canvasDom.height);
+        canvasDom.width = 0;
+        canvasDom.height = 0;
+      });
 
-      canvasDom.width = 0;
-      canvasDom.height = 0;
-
-      appState.uploadedImage = "";
+      appState.uploadedImages = [];
+      appState.imgNames = [];
       appState.isConvert = false;
     };
 
     const convertToPixelArt = () => {
-      const px = new pixelit.pixelit({ scale: 18 });
-      px.draw().pixelate().convertPalette();
+      const canvasDoms = document.querySelectorAll(".pixelitcanvas");
+      const imgDoms = document.querySelectorAll(".pixelitimg");
 
-      // ライブラリに生DOMをいじられるので修正
-      const imgDom = document.getElementById("pixelitimg")
-      imgDom.style = "";
+      imgDoms.forEach((imgDom, index) => {
+        const px = new pixelit.pixelit({
+          to: canvasDoms[index],
+          from: imgDoms[index], 
+          scale: 18
+        });
+        px.draw().pixelate().convertPalette();
+
+        // ライブラリに生DOMをいじられるので修正
+        imgDoms[index].style = "";
+      })
 
       appState.isConvert = true;
     };
