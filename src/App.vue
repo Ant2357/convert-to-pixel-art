@@ -51,6 +51,11 @@ import pixelit from '@/pixelit';
 export default defineComponent({
   name: 'App',
   setup() {
+    // HTML上のClassName(canvas要素)
+    const CANVAS_CLASS_NAME = "pixelitcanvas";
+    // HTML上のClassName(img要素)
+    const IMG_CLASS_NAME = "pixelitimg";
+
     const appState = reactive({
       uploadedImages: [],
       imgNames: [],
@@ -88,7 +93,7 @@ export default defineComponent({
 
     const remove = () => {
       // canvasの初期化(Vueで生DOMを触りたくない)(心からの叫び)
-      const canvasDoms = document.querySelectorAll(".pixelitcanvas");
+      const canvasDoms = document.querySelectorAll(`.${CANVAS_CLASS_NAME}`);
       canvasDoms.forEach(canvasDom => {
         const ctx = canvasDom.getContext("2d");
         ctx.clearRect(0, 0, canvasDom.width, canvasDom.height);
@@ -102,8 +107,8 @@ export default defineComponent({
     };
 
     const convertToPixelArt = () => {
-      const canvasDoms = document.querySelectorAll(".pixelitcanvas");
-      const imgDoms = document.querySelectorAll(".pixelitimg");
+      const canvasDoms = document.querySelectorAll(`.${CANVAS_CLASS_NAME}`);
+      const imgDoms = document.querySelectorAll(`.${IMG_CLASS_NAME}`);
 
       imgDoms.forEach((imgDom, index) => {
         const px = new pixelit.pixelit({
