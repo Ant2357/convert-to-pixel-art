@@ -1,6 +1,6 @@
 <template>
   <div>
-    <label v-show="!appState.uploadedImages[0]">
+    <label v-show="!appState.imgs[0]">
       画像を選択
       <input
         type="file"
@@ -10,7 +10,7 @@
       />
 
     </label>
-    <label v-show="!appState.uploadedImages[0]">
+    <label v-show="!appState.imgs[0]">
       画像を選択(フォルダ参照版)
       <input
         type="file"
@@ -22,21 +22,21 @@
       />
     </label>
 
-    <div v-for="(uploadedImages, index) in appState.uploadedImages" :key="uploadedImages">
+    <div v-for="img in appState.imgs" :key="img.id">
       <img
         class="pixelitimg"
         v-show="!appState.isConvert"
-        :src="uploadedImages"
+        :src="img.data"
       />
 
       <canvas
         class="pixelitcanvas"
       ></canvas>
 
-      <p>{{ appState.imgNames[index] }}</p>
+      <p>{{ img.name }}</p>
     </div>
 
-    <div v-show="appState.uploadedImages[0]">
+    <div v-show="appState.imgs[0]">
       <button @click="convertToPixelArt">convert</button>
       <button @click="remove">close</button>
     </div>
@@ -48,6 +48,14 @@
 import { defineComponent, reactive } from 'vue';
 import pixelit from '@/pixelit';
 
+class Img {
+  constructor(data, name, id) {
+    this.data = data;
+    this.name = name;
+    this.id = id;
+  }
+}
+
 export default defineComponent({
   name: 'App',
   setup() {
@@ -57,8 +65,7 @@ export default defineComponent({
     const IMG_CLASS_NAME = "pixelitimg";
 
     const appState = reactive({
-      uploadedImages: [],
-      imgNames: [],
+      imgs: [],
       isConvert: false
     });
 
@@ -67,8 +74,7 @@ export default defineComponent({
 
       // 単独ファイルの変換
       if (!isMultiple) {
-        createImage(files[0], 0);
-        appState.imgNames = [files[0].name];
+        createImage(files[0], files[0].name, 0);
         return;
       }
 
@@ -78,15 +84,14 @@ export default defineComponent({
         return res;
       });
       arrFiles.forEach((file, index) => {
-        createImage(file[0], index);
+        createImage(file[0], file[0].name, index);
       });
-      appState.imgNames = arrFiles.map(file => file[0].name);
     };
 
-    const createImage = (file, index) => {
+    const createImage = (file, fileName, index) => {
       const reader = new FileReader();
       reader.onload = e => {
-        appState.uploadedImages[index] = e.target.result;
+        appState.imgs[index] = new Img(e.target.result, fileName, index);
       };
       reader.readAsDataURL(file);
     };
@@ -101,8 +106,7 @@ export default defineComponent({
         canvasDom.height = 0;
       });
 
-      appState.uploadedImages = [];
-      appState.imgNames = [];
+      appState.imgs = [];
       appState.isConvert = false;
     };
 
